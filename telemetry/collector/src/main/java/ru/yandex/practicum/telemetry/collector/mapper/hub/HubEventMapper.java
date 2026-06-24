@@ -29,7 +29,7 @@ public class HubEventMapper {
     private static DeviceAddedEventAvro mapToDeviceAddedEventAvro(DeviceAddedEventProto event) {
         return DeviceAddedEventAvro.newBuilder()
                 .setId(event.getId())
-                .setType(DeviceTypeAvro.valueOf(event.getType().name()))
+                .setType(mapDeviceType(event.getType()))
                 .build();
     }
 
@@ -48,8 +48,8 @@ public class HubEventMapper {
 
         return ScenarioConditionAvro.newBuilder()
                 .setSensorId(condition.getSensorId())
-                .setType(ConditionTypeAvro.valueOf(condition.getType().name()))
-                .setOperation(ConditionOperationAvro.valueOf(condition.getOperation().name()))
+                .setType(mapConditionType(condition.getType()))
+                .setOperation(mapConditionOperation(condition.getOperation()))
                 .setValue(conditionValue)
                 .build();
     }
@@ -57,7 +57,7 @@ public class HubEventMapper {
     private static DeviceActionAvro mapToDeviceActionAvro(DeviceActionProto action) {
         return DeviceActionAvro.newBuilder()
                 .setSensorId(action.getSensorId())
-                .setType(ActionTypeAvro.valueOf(action.getType().name()))
+                .setType(mapActionType(action.getType()))
                 .setValue(action.hasValue() ? action.getValue() : null)
                 .build();
     }
@@ -82,5 +82,47 @@ public class HubEventMapper {
         return ScenarioRemovedEventAvro.newBuilder()
                 .setName(event.getName())
                 .build();
+    }
+
+    private static DeviceTypeAvro mapDeviceType(DeviceTypeProto protoType) {
+        return switch (protoType) {
+            case MOTION_SENSOR -> DeviceTypeAvro.MOTION_SENSOR;
+            case TEMPERATURE_SENSOR -> DeviceTypeAvro.TEMPERATURE_SENSOR;
+            case LIGHT_SENSOR -> DeviceTypeAvro.LIGHT_SENSOR;
+            case CLIMATE_SENSOR -> DeviceTypeAvro.CLIMATE_SENSOR;
+            case SWITCH_SENSOR -> DeviceTypeAvro.SWITCH_SENSOR;
+            default -> throw new IllegalArgumentException("Неподдерживаемый тип устройства: " + protoType);
+        };
+    }
+
+    private static ConditionTypeAvro mapConditionType(ConditionTypeProto protoType) {
+        return switch (protoType) {
+            case MOTION -> ConditionTypeAvro.MOTION;
+            case LUMINOSITY -> ConditionTypeAvro.LUMINOSITY;
+            case SWITCH -> ConditionTypeAvro.SWITCH;
+            case TEMPERATURE -> ConditionTypeAvro.TEMPERATURE;
+            case CO2LEVEL -> ConditionTypeAvro.CO2LEVEL;
+            case HUMIDITY -> ConditionTypeAvro.HUMIDITY;
+            default -> throw new IllegalArgumentException("Неподдерживаемый тип условия сценария " + protoType);
+        };
+    }
+
+    private static ConditionOperationAvro mapConditionOperation(ConditionOperationProto protoType) {
+        return switch (protoType) {
+            case EQUALS -> ConditionOperationAvro.EQUALS;
+            case GREATER_THAN -> ConditionOperationAvro.GREATER_THAN;
+            case LOWER_THAN -> ConditionOperationAvro.LOWER_THAN;
+            default -> throw new IllegalArgumentException("Неподдерживаемая логическая операция условия: " + protoType);
+        };
+    }
+
+    private static ActionTypeAvro mapActionType(ActionTypeProto protoType) {
+        return switch (protoType) {
+            case ACTIVATE -> ActionTypeAvro.ACTIVATE;
+            case DEACTIVATE -> ActionTypeAvro.DEACTIVATE;
+            case INVERSE -> ActionTypeAvro.INVERSE;
+            case SET_VALUE -> ActionTypeAvro.SET_VALUE;
+            default -> throw new IllegalArgumentException("Неподдерживаемый тип действия сценария: " + protoType);
+        };
     }
 }
