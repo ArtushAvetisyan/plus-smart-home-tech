@@ -21,8 +21,8 @@ enum DeviceTypeProto {
   MOTION_SENSOR = 0;
   TEMPERATURE_SENSOR = 1;
   LIGHT_SENSOR = 2;
-  SWITCH_SENSOR = 3;
-  CLIMATE_SENSOR = 4;
+  CLIMATE_SENSOR = 3;
+  SWITCH_SENSOR = 4;
 }
 
 enum ConditionTypeProto {
