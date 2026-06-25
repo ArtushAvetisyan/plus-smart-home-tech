@@ -1,6 +1,11 @@
+gRPC:
+  server:
+    port: 59091
+
 spring:
-  Kafka:
+  kafka:
     bootstrap-servers: localhost:9092
+
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: ru.yandex.practicum.telemetry.serialization.GeneralAvroSerializer
@@ -9,8 +14,9 @@ spring:
         enable.idempotence: true
         linger.ms: 20
         batch.size: 16384
+
 app:
-  Kafka:
+  kafka:
     topics:
       sensor: "telemetry.sensors.v1"
       hub: "telemetry.hubs.v1"
