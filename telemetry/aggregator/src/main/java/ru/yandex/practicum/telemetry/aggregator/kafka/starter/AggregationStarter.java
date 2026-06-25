@@ -43,6 +43,14 @@ public class AggregationStarter {
                         SensorsSnapshotAvro snapshot = updatedEvent.get();
                         ProducerRecord<String, SpecificRecordBase> producerRecord = new ProducerRecord<>(
                                 topics.getSnapshotTopic(), snapshot.getHubId(), snapshot);
+
+                        producer.send(producerRecord, (((metadata, exception) -> {
+                            if (exception != null) {
+                                log.error("Ощибка при отправке снэпшота в Kafka: Ключ: {}, Ошибка: {}", snapshot.getHubId(), exception.getMessage(), exception);
+                            } else {
+                                log.info("Снэпшот успешно отправлен. Топик: {}, Офсет: {}", metadata.topic(), metadata.offset());
+                            }
+                        })));
                     }
                 }
                 consumer.commitSync();

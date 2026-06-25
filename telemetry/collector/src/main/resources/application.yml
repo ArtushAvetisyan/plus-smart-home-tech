@@ -1,3 +1,7 @@
+gRPC:
+  server:
+    port: 59091
+
 spring:
   kafka:
     bootstrap-servers: localhost:9092
