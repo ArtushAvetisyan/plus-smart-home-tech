@@ -1,4 +1,4 @@
-package ru.yandex.practicum.telemetry.aggregator.kafka.service;
+package ru.yandex.practicum.telemetry.aggregator.service;
 
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
