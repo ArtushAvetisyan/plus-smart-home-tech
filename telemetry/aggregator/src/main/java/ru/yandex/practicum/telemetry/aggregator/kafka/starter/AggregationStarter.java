@@ -31,7 +31,7 @@ public class AggregationStarter {
     public void start() {
         log.info("Старт Aggregator - а");
         try {
-            log.info("Консюмер подписался на топик: " + topics.getSensorTopic());
+            log.info("Консюмер подписался на топик: {}", topics.getSensorTopic());
             consumer.subscribe(List.of(topics.getSensorTopic()));
             while (true) {
                 ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(Duration.ofMillis(100));
