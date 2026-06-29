@@ -8,7 +8,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 import ru.yandex.practicum.telemetry.analyzer.kafka.topics.Topics;
 import ru.yandex.practicum.telemetry.analyzer.service.snapshot.SnapshotService;
 
@@ -19,6 +21,8 @@ import java.util.List;
 @Slf4j
 public class SnapshotProcessor implements Runnable {
 
+    @Value("${analyzer.kafka.snapshot-consumer.poll-timeout-ms}")
+    private long pollTimeout;
     private final KafkaConsumer<String, SpecificRecordBase> consumer;
     private final SnapshotService service;
     private final Topics topics;
@@ -39,17 +43,23 @@ public class SnapshotProcessor implements Runnable {
             consumer.subscribe(List.of(topics.getSnapshotTopic()));
 
             while (!Thread.currentThread().isInterrupted()) {
-                ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(Duration.ofMillis(100));
+                ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(Duration.ofMillis(pollTimeout));
                 for (ConsumerRecord<String, SpecificRecordBase> record : records) {
-                    service.processSnapshot(record);
+                    if (record.value() instanceof SensorsSnapshotAvro snapshot) {
+                        service.processSnapshot(snapshot);
+                    } else {
+                        log.warn("Получена запись неподдерживаемого типа в топике {}: {}",
+                                record.topic(), record.value() != null ? record.value().getClass().getName() : "null");
+                    }
                 }
-                consumer.commitSync();
+                if (!records.isEmpty()) consumer.commitSync();
             }
         } catch (WakeupException ignored) {
         } catch (Exception exception) {
             log.info("Ошибка во время обработки снэпшотов", exception);
         } finally {
             log.info("Закрытие Snapshot консюмера");
+            consumer.commitSync();
             consumer.close();
         }
     }

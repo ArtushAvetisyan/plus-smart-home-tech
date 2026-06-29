@@ -2,8 +2,6 @@ package ru.yandex.practicum.telemetry.analyzer.service.hub;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.specific.SpecificRecordBase;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.kafka.telemetry.event.*;
@@ -27,9 +25,9 @@ public class HubEventServiceImpl implements HubEventService {
     private final SensorRepository sensorRepository;
 
     @Override
-    public void processHubEvent(ConsumerRecord<String, SpecificRecordBase> record) {
-        if (!(record.value() instanceof HubEventAvro event)) {
-            log.warn("Получена запись неподдерживаемого типа: {}", record.value() != null ? record.value().getClass().getName() : "null");
+    public void processHubEvent(HubEventAvro event) {
+        if (event == null) {
+            log.warn("Получено пустое событие. Обработка невозможна");
             return;
         }
 

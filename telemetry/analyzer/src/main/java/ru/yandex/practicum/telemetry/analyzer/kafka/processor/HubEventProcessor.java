@@ -8,7 +8,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 import ru.yandex.practicum.telemetry.analyzer.kafka.topics.Topics;
 import ru.yandex.practicum.telemetry.analyzer.service.hub.HubEventService;
 
@@ -19,6 +21,8 @@ import java.util.List;
 @Slf4j
 public class HubEventProcessor implements Runnable {
 
+    @Value("${analyzer.kafka.hub-consumer.poll-timeout-ms}")
+    private long pollTimeout;
     private final KafkaConsumer<String, SpecificRecordBase> consumer;
     private final HubEventService service;
     private final Topics topics;
@@ -39,16 +43,23 @@ public class HubEventProcessor implements Runnable {
             consumer.subscribe(List.of(topics.getHubTopic()));
 
             while (!Thread.currentThread().isInterrupted()) {
-                ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(Duration.ofMillis(100));
+                ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(Duration.ofMillis(pollTimeout));
                 for (ConsumerRecord<String, SpecificRecordBase> record : records) {
-                    service.processHubEvent(record);
+                    if (record.value() instanceof HubEventAvro event) {
+                        service.processHubEvent(event);
+                    } else {
+                        log.warn("Получена запись неподдерживаемого типа в топике {}: {}",
+                                record.topic(), record.value() != null ? record.value().getClass().getName() : "null");
+                    }
                 }
+                if (!records.isEmpty()) consumer.commitSync();
             }
         } catch (WakeupException ignored) {
         } catch (Exception exception) {
             log.error("Ошибка во время обработки событий от хаба", exception);
         } finally {
             log.info("Закрытие Hub консюмера");
+            consumer.commitSync();
             consumer.close();
         }
     }

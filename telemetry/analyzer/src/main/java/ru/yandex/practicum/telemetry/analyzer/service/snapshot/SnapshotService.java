@@ -1,8 +1,7 @@
 package ru.yandex.practicum.telemetry.analyzer.service.snapshot;
 
-import org.apache.avro.specific.SpecificRecordBase;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 
 public interface SnapshotService {
-    void processSnapshot(ConsumerRecord<String, SpecificRecordBase> record);
+    void processSnapshot(SensorsSnapshotAvro snapshot);
 }

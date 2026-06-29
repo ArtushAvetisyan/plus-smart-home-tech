@@ -5,8 +5,6 @@ import com.google.protobuf.util.Timestamps;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
-import org.apache.avro.specific.SpecificRecordBase;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.grpc.telemetry.event.ActionTypeProto;
@@ -23,7 +21,6 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class SnapshotServiceImpl implements SnapshotService {
     @GrpcClient("hub-router")
@@ -31,15 +28,16 @@ public class SnapshotServiceImpl implements SnapshotService {
     private final ScenarioRepository scenarioRepository;
 
     @Override
-    public void processSnapshot(ConsumerRecord<String, SpecificRecordBase> record) {
-        if (!(record.value() instanceof SensorsSnapshotAvro snapshot)) {
-            log.warn("Получена запись неподдерживаемого типа: {}", record.value() != null ? record.value().getClass().getName() : "null");
+    @Transactional(readOnly = true)
+    public void processSnapshot(SensorsSnapshotAvro snapshot) {
+        if (snapshot == null) {
+            log.warn("Получен пустой snapshot. Обработка невозможна");
             return;
         }
 
         Map<String, SensorStateAvro> sensorStates = snapshot.getSensorsState();
         if (sensorStates.isEmpty()) {
-            log.warn("Получен пустой снапшот (нет активных датчиков) для хаба: {}", snapshot.getHubId());
+            log.warn("Получен пустой snapshot(нет активных датчиков) для хаба id - {}", snapshot.getHubId());
             return;
         }
 
@@ -47,7 +45,7 @@ public class SnapshotServiceImpl implements SnapshotService {
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
         scenarios.stream()
                 .filter(scenario -> checkConditions(scenario, snapshot))
-                .forEach(scenario -> executeActions(scenario, hubId));
+                .forEach(this::executeActions);
     }
 
     private boolean checkConditions(Scenario scenario, SensorsSnapshotAvro snapshot) {
@@ -77,7 +75,7 @@ public class SnapshotServiceImpl implements SnapshotService {
                 });
     }
 
-    private void executeActions(Scenario scenario, String hubId) {
+    private void executeActions(Scenario scenario) {
         if (scenario.getActions() == null || scenario.getActions().isEmpty()) return;
 
         scenario.getActions().forEach(scenarioAction -> {
@@ -112,7 +110,7 @@ public class SnapshotServiceImpl implements SnapshotService {
                 long millisFromInstant = currentInstant.toEpochMilli();
                 Timestamp timestamp = Timestamps.fromMillis(millisFromInstant);
                 DeviceActionRequestProto deviceActionRequest = DeviceActionRequestProto.newBuilder()
-                        .setHubId(hubId)
+                        .setHubId(scenario.getHubId())
                         .setScenarioName(scenario.getName())
                         .setAction(finalActionProto)
                         .setTimestamp(timestamp)

@@ -18,11 +18,17 @@ analyzer:
       group-id: analyzer-hub-v1
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: ru.yandex.practicum.telemetry.deserialization.HubEventDeserializer
+      poll-timeout-ms: 100
+      enable:
+        auto:
+          commit: false
 
     snapshot-consumer:
       group-id: analyzer-snapshot-v1
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: ru.yandex.practicum.telemetry.deserialization.SnapshotDeserializer
+      poll-timeout-ms: 100
+      max-poll-records: 50
       enable:
         auto:
           commit: false

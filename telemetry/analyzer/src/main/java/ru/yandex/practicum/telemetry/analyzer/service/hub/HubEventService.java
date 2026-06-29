@@ -1,8 +1,7 @@
 package ru.yandex.practicum.telemetry.analyzer.service.hub;
 
-import org.apache.avro.specific.SpecificRecordBase;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 
 public interface HubEventService {
-    void processHubEvent(ConsumerRecord<String, SpecificRecordBase> record);
+    void processHubEvent(HubEventAvro event);
 }
