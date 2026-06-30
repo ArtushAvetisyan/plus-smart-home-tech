@@ -19,7 +19,7 @@ public class KafkaEventProducer implements AutoCloseable {
     private final Topics topics;
 
     public void sendSensorEvent(SensorEventAvro event) {
-        String key = event.getHubId().toString();
+        String key = event.getHubId();
         long timestamp = event.getTimestamp().toEpochMilli();
 
         ProducerRecord<String, SpecificRecordBase> record = new ProducerRecord<>(
@@ -39,7 +39,7 @@ public class KafkaEventProducer implements AutoCloseable {
     }
 
     public void sendHubEvent(HubEventAvro event) {
-        String key = event.getHubId().toString();
+        String key = event.getHubId();
         long timestamp = event.getTimestamp().toEpochMilli();
 
         ProducerRecord<String, SpecificRecordBase> record = new ProducerRecord<>(
