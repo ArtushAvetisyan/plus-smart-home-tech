@@ -1,23 +1,10 @@
 spring:
-  main:
-    web-application-type: none
+  application:
+    name: aggregator
 
-  kafka:
-    bootstrap-servers: localhost:9092
-
-    consumer:
-      group-id: aggregator-v1
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: ru.yandex.practicum.telemetry.deserialization.SensorEventDeserializer
-      enable-auto-commit: false
-
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: ru.yandex.practicum.telemetry.serialization.GeneralAvroSerializer
-
-app:
-  kafka:
-    topics:
-      sensor: "telemetry.sensors.v1"
-      snapshot: "telemetry.snapshots.v1"
+  config:
+    import: configserver:http://localhost:8888
+    fail-fast: true
+    retry:
+      useRandomPolicy: true
+      max-interval: 6000

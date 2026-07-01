@@ -1,22 +1,10 @@
-grpc:
-  server:
-    port: 59091
-
 spring:
-  kafka:
-    bootstrap-servers: localhost:9092
+  application:
+    name: collector
 
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: ru.yandex.practicum.telemetry.serialization.GeneralAvroSerializer
-      backs: all
-      properties:
-        enable.idempotence: true
-        linger.ms: 20
-        batch.size: 16384
-
-app:
-  kafka:
-    topics:
-      sensor: "telemetry.sensors.v1"
-      hub: "telemetry.hubs.v1"
+  config:
+    import: configserver:http://localhost:8888
+    fail-fast: true
+    retry:
+      useRandomPolicy: true
+      max-interval: 6000
