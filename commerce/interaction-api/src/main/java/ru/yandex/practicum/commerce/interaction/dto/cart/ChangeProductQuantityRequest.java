@@ -18,5 +18,5 @@ public class ChangeProductQuantityRequest {
 
     @NotNull(message = "Количество товара должно быть указано")
     @PositiveOrZero(message = "Количество товара не может быть отрицательным")
-    private Long newQuantity;
+    private Integer newQuantity;
 }

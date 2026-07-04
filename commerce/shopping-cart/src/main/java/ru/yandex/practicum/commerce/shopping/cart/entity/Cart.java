@@ -6,7 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -28,6 +29,12 @@ public class Cart {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CartItem> items;
+    @ElementCollection
+    @CollectionTable(
+            name = "cart_products",
+            joinColumns = @JoinColumn(name = "cart_id")
+    )
+    @MapKeyColumn(name = "product_id")
+    @Column(name = "quantity")
+    private Map<UUID, Integer> products = new HashMap<>();
 }

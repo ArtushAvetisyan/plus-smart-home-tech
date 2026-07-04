@@ -8,9 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.interaction.dto.store.ProductCategory;
 import ru.yandex.practicum.commerce.interaction.dto.store.ProductDto;
 import ru.yandex.practicum.commerce.interaction.dto.store.ProductState;
-import ru.yandex.practicum.commerce.interaction.dto.store.SetProductQuantityState;
+import ru.yandex.practicum.commerce.interaction.dto.store.SetProductQuantityStateRequest;
 import ru.yandex.practicum.commerce.shopping.store.entity.Product;
-import ru.yandex.practicum.commerce.shopping.store.handler.exception.IncorrectCategoryException;
 import ru.yandex.practicum.commerce.shopping.store.handler.exception.ProductNotFoundException;
 import ru.yandex.practicum.commerce.shopping.store.mapper.ProductMapper;
 import ru.yandex.practicum.commerce.shopping.store.repository.ProductRepository;
@@ -26,18 +25,13 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductDto> getProducts(String category, Pageable pageable) {
-        if (!ProductCategory.isValid(category)) {
-            throw new IncorrectCategoryException("Пользователь указал неизвестную категорию продукта",
-                    "Указана неизвестная категория продукта");
-        }
-
+    public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
         Page<Product> products = productRepository.findByProductCategory(category, pageable);
         return products.map(productMapper::toProductDto);
     }
 
     @Override
-    public ProductDto createProduct(ProductDto productDto) {
+    public ProductDto createNewProduct(ProductDto productDto) {
         Product product = productMapper.toProduct(productDto);
         Product savedProduct = productRepository.save(product);
         return productMapper.toProductDto(savedProduct);
@@ -46,7 +40,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     @Override
     public ProductDto updateProduct(ProductDto productDto) {
         if (productDto.getProductId() == null) {
-            throw new ProductNotFoundException("Ошибка во время обновления продукта (отсутствует ID",
+            throw new ProductNotFoundException("Ошибка во время обновления продукта (отсутствует ID)",
                     "Невозможно обновить продукт (отсутствует ID");
         }
 
@@ -62,15 +56,15 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
         Product existingProduct = getProductOrThrow(productId);
         existingProduct.setProductState(ProductState.DEACTIVATE);
         productRepository.save(existingProduct);
-        return existingProduct.getProductState() == ProductState.DEACTIVATE;
+        return true;
     }
 
     @Override
-    public boolean setProductQuantityState(SetProductQuantityState request) {
+    public boolean setProductQuantityState(SetProductQuantityStateRequest request) {
         Product existingProduct = getProductOrThrow(request.getProductId());
         existingProduct.setQuantityState(request.getQuantityState());
         productRepository.save(existingProduct);
-        return existingProduct.getQuantityState() == request.getQuantityState();
+        return true;
     }
 
     @Override
@@ -83,7 +77,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     private Product getProductOrThrow(UUID productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(
-                        "Продукт с id - " + productId + " не найдён",
+                        "Продукт с id - " + productId + " не найден",
                         "Продукт с указанным ID не найден"));
     }
 }

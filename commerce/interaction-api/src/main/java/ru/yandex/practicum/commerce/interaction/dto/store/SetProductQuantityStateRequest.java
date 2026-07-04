@@ -10,7 +10,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SetProductQuantityState {
+public class SetProductQuantityStateRequest {
 
     @NotNull(message = "Идентификатор товара должен быть указан")
     private UUID productId;
