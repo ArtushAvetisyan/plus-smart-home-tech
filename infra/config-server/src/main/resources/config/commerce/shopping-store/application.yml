@@ -11,8 +11,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-
-  cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
