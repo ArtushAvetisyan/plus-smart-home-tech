@@ -67,7 +67,7 @@ public class WarehouseServiceImpl implements WarehouseService {
             }
 
             if (product.getQuantity() < requestedQuantity) {
-                throw new ProductInShoppingCartLowQuantityInWarehouse("Недостаточно товара на складе (id - " + productId,
+                throw new ProductInShoppingCartLowQuantityInWarehouse("Недостаточно товара на складе (id - " + productId + ")",
                         "Недостаточно товара на складе");
             }
 
@@ -86,8 +86,8 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     public void receiveProductInWarehouse(AddProductToWarehouseRequest request) {
         WarehouseProduct product = warehouseRepository.findById(request.getProductId()).orElseThrow(() ->
-                new NoSpecifiedProductInWarehouseException("Продукт отсуствует на складе",
-                        "Продукт отсуствует на складе"));
+                new NoSpecifiedProductInWarehouseException("Продукт отсутствует на складе",
+                        "Продукт отсутствует на складе"));
 
         product.setQuantity(product.getQuantity() + request.getQuantity());
         warehouseRepository.save(product);

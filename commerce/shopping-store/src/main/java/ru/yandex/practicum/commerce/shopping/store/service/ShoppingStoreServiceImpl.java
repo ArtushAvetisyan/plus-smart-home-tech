@@ -26,7 +26,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
-        Page<Product> products = productRepository.findByProductCategory(category, pageable);
+        Page<Product> products = productRepository.findByProductCategoryAndProductState(category, ProductState.ACTIVE, pageable);
         return products.map(productMapper::toProductDto);
     }
 
@@ -41,7 +41,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     public ProductDto updateProduct(ProductDto productDto) {
         if (productDto.getProductId() == null) {
             throw new ProductNotFoundException("Ошибка во время обновления продукта (отсутствует ID)",
-                    "Невозможно обновить продукт (отсутствует ID");
+                    "Невозможно обновить продукт (отсутствует ID)");
         }
 
         Product existingProduct = getProductOrThrow(productDto.getProductId());

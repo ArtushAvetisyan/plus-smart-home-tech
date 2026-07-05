@@ -8,6 +8,7 @@ import ru.yandex.practicum.commerce.interaction.dto.cart.ChangeProductQuantityRe
 import ru.yandex.practicum.commerce.interaction.dto.cart.ShoppingCartDto;
 import ru.yandex.practicum.commerce.shopping.cart.entity.Cart;
 import ru.yandex.practicum.commerce.shopping.cart.handler.exception.CartNotFoundException;
+import ru.yandex.practicum.commerce.shopping.cart.handler.exception.NoProductsInShoppingCartException;
 import ru.yandex.practicum.commerce.shopping.cart.mapper.ShoppingCartMapper;
 import ru.yandex.practicum.commerce.shopping.cart.repository.ShoppingCartRepository;
 
@@ -53,6 +54,12 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     public ShoppingCartDto removeFromShoppingCart(String username, List<UUID> productIds) {
         Cart cart = getActiveCartOrThrow(username);
+        for (UUID productId : productIds) {
+            if (!cart.getProducts().containsKey(productId)) {
+                throw new NoProductsInShoppingCartException("Товар с id " + productId + " не найден в корзине",
+                        "Нет искомых товаров в корзине");
+            }
+        }
 
         productIds.forEach(productId -> cart.getProducts().remove(productId));
         return cartMapper.toCartDto(cartRepository.save(cart));
@@ -61,6 +68,10 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     public ShoppingCartDto changeProductQuantity(String username, ChangeProductQuantityRequest changeRequest) {
         Cart cart = getActiveCartOrThrow(username);
+        if (!cart.getProducts().containsKey(changeRequest.getProductId())) {
+            throw new NoProductsInShoppingCartException("Товар не найден в корзине",
+                    "Нет искомых товаров в корзине");
+        }
 
         cart.getProducts().put(changeRequest.getProductId(), changeRequest.getNewQuantity());
         ShoppingCartDto cartDto = cartMapper.toCartDto(cart);
