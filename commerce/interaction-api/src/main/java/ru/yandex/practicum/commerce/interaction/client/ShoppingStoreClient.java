@@ -1,5 +1,10 @@
 package ru.yandex.practicum.commerce.interaction.client;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.interaction.dto.store.PageProductDto;
@@ -15,24 +20,24 @@ public interface ShoppingStoreClient {
 
     @GetMapping
     PageProductDto getProducts(
-            @RequestParam("category") ProductCategory category,
-            @RequestParam("page") int page,
-            @RequestParam("size") int size,
-            @RequestParam("sort") List<String> sort
+            @RequestParam("category") @NotNull ProductCategory category,
+            @RequestParam("page") @Min(0) int page,
+            @RequestParam("size") @Positive int size,
+            @RequestParam("sort") @NotEmpty List<String> sort
     );
 
     @PutMapping
-    ProductDto createNewProduct(@RequestBody ProductDto productDto);
+    ProductDto createNewProduct(@Valid @RequestBody ProductDto productDto);
 
     @PostMapping
-    ProductDto updateProduct(@RequestBody ProductDto productDto);
+    ProductDto updateProduct(@Valid @RequestBody ProductDto productDto);
 
     @PostMapping("/removeProductFromStore")
-    Boolean removeProductFromStore(@RequestBody UUID productId);
+    Boolean removeProductFromStore(@RequestBody @NotNull UUID productId);
 
     @PostMapping("/quantityState")
-    Boolean setProductQuantityState(@RequestBody SetProductQuantityStateRequest request);
+    Boolean setProductQuantityState(@Valid @RequestBody SetProductQuantityStateRequest request);
 
     @GetMapping("/{productId}")
-    ProductDto getProduct(@PathVariable("productId") UUID productId);
+    ProductDto getProduct(@PathVariable("productId") @NotNull UUID productId);
 }

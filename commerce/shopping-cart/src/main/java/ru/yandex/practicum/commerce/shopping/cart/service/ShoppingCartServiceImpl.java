@@ -26,6 +26,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     private final ShoppingCartMapper cartMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public ShoppingCartDto getShoppingCart(String username) {
         Cart cart = getOrCreateActiveCart(username);
         return cartMapper.toCartDto(cart);
@@ -54,11 +55,9 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     public ShoppingCartDto removeFromShoppingCart(String username, List<UUID> productIds) {
         Cart cart = getActiveCartOrThrow(username);
-        for (UUID productId : productIds) {
-            if (!cart.getProducts().containsKey(productId)) {
-                throw new NoProductsInShoppingCartException("Товар с id " + productId + " не найден в корзине",
-                        "Нет искомых товаров в корзине");
-            }
+        if (cart.getProducts().isEmpty()) {
+            throw new NoProductsInShoppingCartException("Корзина пустая. Удаление невозможна",
+                    "Корзина пустая. Удаление невозможна");
         }
 
         productIds.forEach(productId -> cart.getProducts().remove(productId));
