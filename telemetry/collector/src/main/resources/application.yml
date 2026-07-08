@@ -3,13 +3,16 @@ grpc:
     port: 59091
 
 spring:
+  application:
+    name: collector
+
   kafka:
     bootstrap-servers: localhost:9092
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: ru.yandex.practicum.telemetry.serialization.GeneralAvroSerializer
-      backs: all
+      acks: all
       properties:
         enable.idempotence: true
         linger.ms: 20

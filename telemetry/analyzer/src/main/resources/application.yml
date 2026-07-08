@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: analyzer
+
   main:
     web-application-type: none
 
