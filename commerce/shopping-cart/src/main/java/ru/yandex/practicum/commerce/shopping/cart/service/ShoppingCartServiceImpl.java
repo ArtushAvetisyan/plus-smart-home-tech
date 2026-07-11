@@ -6,9 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.interaction.client.WarehouseClient;
 import ru.yandex.practicum.commerce.interaction.dto.cart.ChangeProductQuantityRequest;
 import ru.yandex.practicum.commerce.interaction.dto.cart.ShoppingCartDto;
+import ru.yandex.practicum.commerce.interaction.exception.CartNotFoundException;
+import ru.yandex.practicum.commerce.interaction.exception.NoProductsInShoppingCartException;
+import ru.yandex.practicum.commerce.interaction.exception.NotAuthorizedUserException;
 import ru.yandex.practicum.commerce.shopping.cart.entity.Cart;
-import ru.yandex.practicum.commerce.shopping.cart.handler.exception.CartNotFoundException;
-import ru.yandex.practicum.commerce.shopping.cart.handler.exception.NoProductsInShoppingCartException;
 import ru.yandex.practicum.commerce.shopping.cart.mapper.ShoppingCartMapper;
 import ru.yandex.practicum.commerce.shopping.cart.repository.ShoppingCartRepository;
 
@@ -28,12 +29,14 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Override
     @Transactional(readOnly = true)
     public ShoppingCartDto getShoppingCart(String username) {
+        checkUsername(username);
         Cart cart = getOrCreateActiveCart(username);
         return cartMapper.toCartDto(cart);
     }
 
     @Override
     public ShoppingCartDto addProductToShoppingCart(String username, Map<UUID, Integer> products) {
+        checkUsername(username);
         Cart cart = getOrCreateActiveCart(username);
 
         products.forEach((productId, quantity) ->
@@ -46,6 +49,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
     @Override
     public void deactivateCurrentShoppingCart(String username) {
+        checkUsername(username);
         Cart cart = getActiveCartOrThrow(username);
 
         cart.setActive(false);
@@ -54,6 +58,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
     @Override
     public ShoppingCartDto removeFromShoppingCart(String username, List<UUID> productIds) {
+        checkUsername(username);
         Cart cart = getActiveCartOrThrow(username);
         if (cart.getProducts().isEmpty()) {
             throw new NoProductsInShoppingCartException("Корзина пустая. Удаление невозможна",
@@ -66,6 +71,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
     @Override
     public ShoppingCartDto changeProductQuantity(String username, ChangeProductQuantityRequest changeRequest) {
+        checkUsername(username);
         Cart cart = getActiveCartOrThrow(username);
         if (!cart.getProducts().containsKey(changeRequest.getProductId())) {
             throw new NoProductsInShoppingCartException("Товар не найден в корзине",
@@ -79,6 +85,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     }
 
     private Cart getOrCreateActiveCart(String username) {
+        checkUsername(username);
         return cartRepository.findByUsernameAndIsActiveTrue(username)
                 .orElseGet(() -> {
                     Cart cart = new Cart();
@@ -93,5 +100,11 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         return cartRepository.findByUsernameAndIsActiveTrue(username).orElseThrow(() ->
                 new CartNotFoundException("Активная корзина для пользователя не найдена: " + username,
                         "Активная корзина для пользователя не найдена: " + username));
+    }
+
+    private void checkUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new NotAuthorizedUserException("Имя пользователя не может быть пустым", "Указан пустое имя пользователя");
+        }
     }
 }

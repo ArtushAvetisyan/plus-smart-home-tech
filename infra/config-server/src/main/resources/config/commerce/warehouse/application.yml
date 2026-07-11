@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5435/warehouseDB
+    url: jdbc:postgresql://localhost:54357/warehouseDB
     username: admin
     password: admin
 
