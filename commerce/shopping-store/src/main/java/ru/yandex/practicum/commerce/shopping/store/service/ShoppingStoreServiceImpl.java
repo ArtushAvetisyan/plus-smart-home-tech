@@ -9,11 +9,13 @@ import ru.yandex.practicum.commerce.interaction.dto.store.ProductCategory;
 import ru.yandex.practicum.commerce.interaction.dto.store.ProductDto;
 import ru.yandex.practicum.commerce.interaction.dto.store.ProductState;
 import ru.yandex.practicum.commerce.interaction.dto.store.SetProductQuantityStateRequest;
-import ru.yandex.practicum.commerce.shopping.store.entity.Product;
 import ru.yandex.practicum.commerce.interaction.exception.ProductNotFoundException;
+import ru.yandex.practicum.commerce.shopping.store.entity.Product;
 import ru.yandex.practicum.commerce.shopping.store.mapper.ProductMapper;
 import ru.yandex.practicum.commerce.shopping.store.repository.ProductRepository;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -28,6 +30,14 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
         Page<Product> products = productRepository.findByProductCategoryAndProductState(category, ProductState.ACTIVE, pageable);
         return products.map(productMapper::toProductDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductDto> getProductsByIds(Set<UUID> productIds) {
+        return productRepository.findAllById(productIds).stream()
+                .map(productMapper::toProductDto)
+                .toList();
     }
 
     @Override

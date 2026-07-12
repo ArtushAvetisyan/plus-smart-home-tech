@@ -8,14 +8,15 @@ import ru.yandex.practicum.commerce.interaction.client.PaymentClient;
 import ru.yandex.practicum.commerce.interaction.client.WarehouseClient;
 import ru.yandex.practicum.commerce.interaction.dto.cart.ShoppingCartDto;
 import ru.yandex.practicum.commerce.interaction.dto.delivery.DeliveryDto;
-import ru.yandex.practicum.commerce.interaction.dto.delivery.DeliveryState;
 import ru.yandex.practicum.commerce.interaction.dto.order.CreateNewOrderRequest;
 import ru.yandex.practicum.commerce.interaction.dto.order.OrderDto;
 import ru.yandex.practicum.commerce.interaction.dto.order.OrderState;
 import ru.yandex.practicum.commerce.interaction.dto.order.ProductReturnRequest;
+import ru.yandex.practicum.commerce.interaction.dto.warehouse.AddressDto;
 import ru.yandex.practicum.commerce.interaction.exception.NoOrderFoundException;
 import ru.yandex.practicum.commerce.interaction.exception.NotAuthorizedUserException;
 import ru.yandex.practicum.commerce.order.entity.Order;
+import ru.yandex.practicum.commerce.order.mapper.DeliveryMapper;
 import ru.yandex.practicum.commerce.order.mapper.OrderMapper;
 import ru.yandex.practicum.commerce.order.repository.OrderRepository;
 
@@ -33,14 +34,15 @@ public class OrderServiceImpl implements OrderService {
     private final WarehouseClient warehouseClient;
     private final DeliveryClient deliveryClient;
     private final PaymentClient paymentClient;
-    private final OrderMapper mapper;
+    private final DeliveryMapper deliveryMapper;
+    private final OrderMapper orderMapper;
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderDto> getClientOrders(String username) {
         checkUsername(username);
         return orderRepository.findAllByUsername(username).stream()
-                .map(mapper::toOrderDto)
+                .map(orderMapper::toOrderDto)
                 .toList();
     }
 
@@ -57,23 +59,13 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Адрес доставки не может быть пустым");
         }
 
-        Order order = new Order();
-        order.setOrderId(UUID.randomUUID());
-        order.setShoppingCartId(cart.getShoppingCartId());
-        order.setUsername(username);
-        order.setProducts(cartProducts);
-        order.setState(OrderState.NEW);
-
-        DeliveryDto deliveryDto = new DeliveryDto();
-        deliveryDto.setDeliveryId(UUID.randomUUID());
-        deliveryDto.setFromAddress(warehouseClient.getWarehouseAddress());
-        deliveryDto.setToAddress(request.getDeliveryAddress());
-        deliveryDto.setOrderId(order.getOrderId());
-        deliveryDto.setDeliveryState(DeliveryState.CREATED);
+        Order order = orderMapper.toOrder(username, cart, cartProducts);
+        AddressDto fromAddress = warehouseClient.getWarehouseAddress();
+        DeliveryDto deliveryDto = deliveryMapper.toDeliveryDto(request, order.getOrderId(), fromAddress);
 
         DeliveryDto plannedDelivery = deliveryClient.planDelivery(deliveryDto);
         order.setDeliveryId(plannedDelivery.getDeliveryId());
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
@@ -84,80 +76,83 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = findOrderByIdOrThrow(request.getOrderId());
         order.setState(OrderState.PRODUCT_RETURNED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto paymentSuccess(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.PAID);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto paymentFailed(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.PAYMENT_FAILED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto delivery(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.DELIVERED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto deliveryFailed(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.DELIVERY_FAILED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto complete(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.COMPLETED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto calculateTotalCost(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
-        OrderDto orderDto = mapper.toOrderDto(order);
+        OrderDto orderDto = orderMapper.toOrderDto(order);
 
         BigDecimal productCost = paymentClient.productCost(orderDto);
         order.setProductPrice(productCost.doubleValue());
 
-        OrderDto updatedOrderDto = mapper.toOrderDto(order);
+        OrderDto updatedOrderDto = orderMapper.toOrderDto(order);
         BigDecimal totalCost = paymentClient.getTotalCost(updatedOrderDto);
         order.setTotalPrice(totalCost.doubleValue());
 
-        return mapper.toOrderDto(orderRepository.save(order));
+        OrderDto finalOrderDto = orderMapper.toOrderDto(order);
+        paymentClient.payment(finalOrderDto);
+
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto calculateDeliveryCost(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
-        OrderDto orderDto = mapper.toOrderDto(order);
-        double deliveryCost = deliveryClient.deliveryCost(orderDto);
-        order.setDeliveryPrice(deliveryCost);
-        return mapper.toOrderDto(orderRepository.save(order));
+        OrderDto orderDto = orderMapper.toOrderDto(order);
+        BigDecimal deliveryCost = deliveryClient.deliveryCost(orderDto);
+        order.setDeliveryPrice(deliveryCost.doubleValue());
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto assembly(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.ASSEMBLED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     @Override
     public OrderDto assemblyFailed(UUID orderId) {
         Order order = findOrderByIdOrThrow(orderId);
         order.setState(OrderState.ASSEMBLY_FAILED);
-        return mapper.toOrderDto(orderRepository.save(order));
+        return orderMapper.toOrderDto(orderRepository.save(order));
     }
 
     private Order findOrderByIdOrThrow(UUID orderId) {

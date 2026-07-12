@@ -13,6 +13,7 @@ import ru.yandex.practicum.commerce.interaction.dto.store.ProductDto;
 import ru.yandex.practicum.commerce.interaction.dto.store.SetProductQuantityStateRequest;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @FeignClient(name = "shopping-store", path = "/api/v1/shopping-store")
@@ -25,6 +26,9 @@ public interface ShoppingStoreClient {
             @RequestParam("size") @Positive int size,
             @RequestParam("sort") @NotEmpty List<String> sort
     );
+
+    @GetMapping("/batch")
+    List<ProductDto> getProductsByIds(@RequestBody @NotEmpty Set<UUID> productIds);
 
     @PutMapping
     ProductDto createNewProduct(@Valid @RequestBody ProductDto productDto);

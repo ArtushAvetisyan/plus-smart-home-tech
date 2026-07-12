@@ -15,6 +15,7 @@ import ru.yandex.practicum.commerce.interaction.dto.warehouse.AddressDto;
 import ru.yandex.practicum.commerce.interaction.dto.warehouse.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.exception.NoDeliveryFoundException;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -60,29 +61,31 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     @Transactional(readOnly = true)
-    public Double calculateDeliveryCost(OrderDto orderDto) {
+    public BigDecimal calculateDeliveryCost(OrderDto orderDto) {
         Delivery delivery = findDeliveryByOrderIdOrThrow(orderDto.getOrderId());
-        double currentCost = 5.0;
+        BigDecimal currentCost = BigDecimal.valueOf(5.0);
 
         AddressDto warehouseAddress = delivery.getFromAddress();
         AddressDto clientAddress = delivery.getToAddress();
 
         if (checkAddress(warehouseAddress, "ADDRESS_1")) {
-            currentCost += currentCost * 1;
+            currentCost = currentCost.add(currentCost.multiply(BigDecimal.valueOf(1)));
         } else if (checkAddress(warehouseAddress, "ADDRESS_2")) {
-            currentCost += currentCost * 2;
+            currentCost = currentCost.add(currentCost.multiply(BigDecimal.valueOf(2)));
         }
 
         if (Boolean.TRUE.equals(orderDto.getFragile())) {
-            currentCost += currentCost * 0.2;
+            currentCost = currentCost.add(currentCost.multiply(BigDecimal.valueOf(0.2)));
         }
 
         if (orderDto.getDeliveryWeight() != null) {
-            currentCost += orderDto.getDeliveryWeight() * 0.3;
+            BigDecimal weight = BigDecimal.valueOf(orderDto.getDeliveryWeight());
+            currentCost = currentCost.add(weight.multiply(BigDecimal.valueOf(0.3)));
         }
 
         if (orderDto.getDeliveryVolume() != null) {
-            currentCost += orderDto.getDeliveryVolume() * 0.2;
+            BigDecimal volume = BigDecimal.valueOf(orderDto.getDeliveryVolume());
+            currentCost = currentCost.add(volume.multiply(BigDecimal.valueOf(0.2)));
         }
 
         String warehouseStreet = (warehouseAddress != null && warehouseAddress.getStreet() != null)
@@ -91,7 +94,7 @@ public class DeliveryServiceImpl implements DeliveryService {
                 ? clientAddress.getStreet() : "";
 
         if (!clientStreet.equalsIgnoreCase(warehouseStreet)) {
-            currentCost += currentCost * 0.2;
+            currentCost = currentCost.add(currentCost.multiply(BigDecimal.valueOf(0.2)));
         }
         return currentCost;
     }

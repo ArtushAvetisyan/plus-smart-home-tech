@@ -8,14 +8,20 @@ import ru.yandex.practicum.commerce.interaction.client.ShoppingStoreClient;
 import ru.yandex.practicum.commerce.interaction.dto.order.OrderDto;
 import ru.yandex.practicum.commerce.interaction.dto.payment.PaymentDto;
 import ru.yandex.practicum.commerce.interaction.dto.payment.PaymentStatus;
+import ru.yandex.practicum.commerce.interaction.dto.store.ProductDto;
 import ru.yandex.practicum.commerce.interaction.exception.NoOrderFoundException;
 import ru.yandex.practicum.commerce.interaction.exception.NotEnoughInfoInOrderToCalculateException;
+import ru.yandex.practicum.commerce.interaction.exception.ProductNotFoundException;
 import ru.yandex.practicum.commerce.payment.entity.Payment;
 import ru.yandex.practicum.commerce.payment.mapper.PaymentMapper;
 import ru.yandex.practicum.commerce.payment.repository.PaymentRepository;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,14 +48,7 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal deliveryPrice = BigDecimal.valueOf(orderDto.getDeliveryPrice());
         BigDecimal totalCost = productCost.add(vat).add(deliveryPrice);
 
-        Payment payment = new Payment();
-        payment.setPaymentId(UUID.randomUUID());
-        payment.setOrderId(orderDto.getOrderId());
-        payment.setProductPrice(productCost);
-        payment.setDeliveryTotal(BigDecimal.valueOf(orderDto.getDeliveryPrice()));
-        payment.setFeeTotal(vat);
-        payment.setTotalPayment(totalCost);
-        payment.setStatus(PaymentStatus.PENDING);
+        Payment payment = mapper.toPayment(orderDto.getOrderId(), productCost, deliveryPrice, vat, totalCost);
 
         paymentRepository.save(payment);
         return mapper.toPaymentDto(payment);
@@ -77,12 +76,22 @@ public class PaymentServiceImpl implements PaymentService {
                     "В заказе отсутствуют товары для расчета");
         }
 
+        Set<UUID> productIds = orderDto.getProducts().keySet();
+        List<ProductDto> products = storeClient.getProductsByIds(productIds);
+        Map<UUID, BigDecimal> priceMap = products.stream()
+                .collect(Collectors.toMap(ProductDto::getProductId, ProductDto::getPrice));
+
         return orderDto.getProducts().entrySet().stream()
                 .map(entry -> {
                     UUID productId = entry.getKey();
                     int quantity = entry.getValue();
 
-                    BigDecimal price = storeClient.getProduct(productId).getPrice();
+                    BigDecimal price = priceMap.get(productId);
+                    if (price == null) {
+                        throw new ProductNotFoundException("Продукт с ID " + productId + " не найден в магазине",
+                                "Продукт с ID " + productId + " не найден в магазине");
+                    }
+
                     return price.multiply(BigDecimal.valueOf(quantity));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
