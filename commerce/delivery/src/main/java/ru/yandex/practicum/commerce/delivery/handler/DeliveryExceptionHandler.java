@@ -1,0 +1,60 @@
+package ru.yandex.practicum.commerce.delivery.handler;
+
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.yandex.practicum.commerce.interaction.exception.NoDeliveryFoundException;
+import ru.yandex.practicum.commerce.interaction.exception.response.ErrorResponse;
+
+@RestControllerAdvice
+public class DeliveryExceptionHandler {
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoDeliveryFoundException(NoDeliveryFoundException exception) {
+        return ErrorResponse.builder()
+                .message(exception.getMessage())
+                .userMessage(exception.getUserMessage())
+                .httpStatus(HttpStatus.NOT_FOUND.name())
+                .build();
+    }
+
+    @ExceptionHandler()
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleCircuitBreakerOpen(CallNotPermittedException exception) {
+        String circuitBreakerName = exception.getCausingCircuitBreakerName();
+        String userMessage = "Не удалось связаться со смежным сервисом. Пожалуйста, повторите попытку позже";
+
+        if ("warehouse".equalsIgnoreCase(circuitBreakerName)) {
+            userMessage = "Сервис склада временно недоступен. Пожалуйста, попробуйте оформить заказ позже";
+        } else if ("order".equalsIgnoreCase(circuitBreakerName)) {
+            userMessage = "Сервис заказов временно недоступен. Пожалуйста, повторите попытку позже";
+        }
+        return ErrorResponse.builder()
+                .message(exception.getMessage())
+                .userMessage(userMessage)
+                .httpStatus(HttpStatus.SERVICE_UNAVAILABLE.name())
+                .build();
+    }
+
+    @ExceptionHandler()
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ErrorResponse handleFeignException(FeignException exception) {
+        String url = exception.request() != null ? exception.request().url() : "";
+        String userMessage = "Не удалось связаться со смежным сервисом. Пожалуйста, повторите попытку позже";
+
+        if (url.contains("warehouse")) {
+            userMessage = "Не удалось связаться с сервисом склада. Пожалуйста, повторите попытку позже";
+        } else if (url.contains("order")) {
+            userMessage = "Не удалось связаться с сервисом заказов. Пожалуйста, повторите попытку позже";
+        }
+        return ErrorResponse.builder()
+                .message(exception.getMessage())
+                .userMessage(userMessage)
+                .httpStatus(HttpStatus.BAD_GATEWAY.name())
+                .build();
+    }
+}

@@ -1,6 +1,7 @@
 package ru.yandex.practicum.commerce.shopping.store.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import ru.yandex.practicum.commerce.shopping.store.mapper.PageableMapper;
 import ru.yandex.practicum.commerce.shopping.store.service.ShoppingStoreService;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -35,6 +37,12 @@ public class ShoppingStoreController implements ShoppingStoreClient {
         Pageable pageable = pageableMapper.toPageable(page, size, sort);
         Page<ProductDto> productPage = shoppingStoreService.getProducts(category, pageable);
         return pageableMapper.toPageProductDto(productPage);
+    }
+
+    @Override
+    @GetMapping("/batch")
+    public List<ProductDto> getProductsByIds(@RequestBody @NotEmpty Set<UUID> productIds) {
+        return shoppingStoreService.getProductsByIds(productIds);
     }
 
     @Override
